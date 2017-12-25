@@ -3,13 +3,18 @@ package com.coolweather.app.activity;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.youmi.android.AdManager;
+import com.coolweather.app.R;
+import com.coolweather.app.model.City;
+import com.coolweather.app.model.CoolWeatherDB;
+import com.coolweather.app.model.County;
+import com.coolweather.app.model.Province;
+import com.coolweather.app.util.HttpCallbackListener;
+import com.coolweather.app.util.HttpUtil;
+import com.coolweather.app.util.Utility;
+
 import android.app.Activity;
 import android.app.ProgressDialog;
-import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.Window;
@@ -20,17 +25,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.coolweather.app.R;
-import com.coolweather.app.db.CoolWeatherDB;
-import com.coolweather.app.model.City;
-import com.coolweather.app.model.County;
-import com.coolweather.app.model.Province;
-import com.coolweather.app.util.HttpCallbackListener;
-import com.coolweather.app.util.HttpUtil;
-import com.coolweather.app.util.Utility;
-
 public class ChooseAreaActivity extends Activity {
 
+	
 	public static final int LEVEL_PROVINCE = 0;
 	public static final int LEVEL_CITY = 1;
 	public static final int LEVEL_COUNTY = 2;
@@ -41,101 +38,51 @@ public class ChooseAreaActivity extends Activity {
 	private ArrayAdapter<String> adapter;
 	private CoolWeatherDB coolWeatherDB;
 	private List<String> dataList = new ArrayList<String>();
-	/**
-	 * çœåˆ—è¡¨
-	 */
+	
 	private List<Province> provinceList;
-	/**
-	 * å¸‚åˆ—è¡¨
-	 */
 	private List<City> cityList;
-	/**
-	 * å¿åˆ—è¡¨
-	 */
 	private List<County> countyList;
-	/**
-	 * é€‰ä¸­çš„çœä»½
-	 */
 	private Province selectedProvince;
-	/**
-	 * é€‰ä¸­çš„åŸå¸‚
-	 */
 	private City selectedCity;
-	/**
-	 * å½“å‰é€‰ä¸­çš„çº§åˆ«
-	 */
 	private int currentLevel;
-	/**
-	 * æ˜¯å¦ä»WeatherActivityä¸­è·³è½¬è¿‡æ¥ã€‚
-	 */
-	private boolean isFromWeatherActivity;
-
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
 		super.onCreate(savedInstanceState);
-		AdManager.getInstance(this).init("cf9c2a749cd97145","289874826c698edd", false);
-		isFromWeatherActivity = getIntent().getBooleanExtra("from_weather_activity", false);
-		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-		if (prefs.getBoolean("city_selected", false) && !isFromWeatherActivity) {
-			Intent intent = new Intent(this, WeatherActivity.class);
-			startActivity(intent);
-			finish();
-			return;
-		}
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		setContentView(R.layout.choose_area);
+		//»ñÈ¡¿Ø¼şµÄÊµÀı
 		listView = (ListView) findViewById(R.id.list_view);
 		titleText = (TextView) findViewById(R.id.title_text);
-		adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, dataList);
+		//×÷ÎªListViewµÄÊÊÅäÆ÷
+		adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1,dataList);
 		listView.setAdapter(adapter);
 		coolWeatherDB = CoolWeatherDB.getInstance(this);
+		//ÉèÖÃµã»÷ÊÂ¼ş
 		listView.setOnItemClickListener(new OnItemClickListener() {
+			
 			@Override
-			public void onItemClick(AdapterView<?> arg0, View view, int index,
-					long arg3) {
+			public void onItemClick(AdapterView<?> arg0, View view, int index, long arg3) {
+				// TODO Auto-generated method stub
 				if (currentLevel == LEVEL_PROVINCE) {
 					selectedProvince = provinceList.get(index);
 					queryCities();
-				} else if (currentLevel == LEVEL_CITY) {
+				} else if(currentLevel == LEVEL_CITY){
 					selectedCity = cityList.get(index);
 					queryCounties();
-				} else if (currentLevel == LEVEL_COUNTY) {
-					String countyCode = countyList.get(index).getCountyCode();
-					Intent intent = new Intent(ChooseAreaActivity.this, WeatherActivity.class);
-					intent.putExtra("county_code", countyCode);
-					startActivity(intent);
-					finish();
 				}
 			}
-		});
-		queryProvinces();  // åŠ è½½çœçº§æ•°æ®
-	}
-
-	/**
-	 * æŸ¥è¯¢å…¨å›½æ‰€æœ‰çš„çœï¼Œä¼˜å…ˆä»æ•°æ®åº“æŸ¥è¯¢ï¼Œå¦‚æœæ²¡æœ‰æŸ¥è¯¢åˆ°å†å»æœåŠ¡å™¨ä¸ŠæŸ¥è¯¢ã€‚
-	 */
-	private void queryProvinces() {
-		provinceList = coolWeatherDB.loadProvinces();
-		if (provinceList.size() > 0) {
-			dataList.clear();
-			for (Province province : provinceList) {
-				dataList.add(province.getProvinceName());
-			}
-			adapter.notifyDataSetChanged();
-			listView.setSelection(0);
-			titleText.setText("ä¸­å›½");
-			currentLevel = LEVEL_PROVINCE;
-		} else {
-			queryFromServer(null, "province");
+				
+			});
+		//µ÷ÓÃ·½·¨£¬¿ªÊ¼¼ÓÔØÊ¡¼¶Êı¾İ
+		queryProvinces();
 		}
-	}
 
-	/**
-	 * æŸ¥è¯¢é€‰ä¸­çœå†…æ‰€æœ‰çš„å¸‚ï¼Œä¼˜å…ˆä»æ•°æ®åº“æŸ¥è¯¢ï¼Œå¦‚æœæ²¡æœ‰æŸ¥è¯¢åˆ°å†å»æœåŠ¡å™¨ä¸ŠæŸ¥è¯¢ã€‚
-	 */
-	private void queryCities() {
+	protected void queryCities() {
+		// TODO Auto-generated method stub
 		cityList = coolWeatherDB.loadCities(selectedProvince.getId());
-		if (cityList.size() > 0) {
+		if (cityList.size()>0) {
 			dataList.clear();
 			for (City city : cityList) {
 				dataList.add(city.getCityName());
@@ -145,65 +92,49 @@ public class ChooseAreaActivity extends Activity {
 			titleText.setText(selectedProvince.getProvinceName());
 			currentLevel = LEVEL_CITY;
 		} else {
-			queryFromServer(selectedProvince.getProvinceCode(), "city");
+			queryFromServer(selectedProvince.getProvinceCode(),"city");
 		}
 	}
-	
-	/**
-	 * æŸ¥è¯¢é€‰ä¸­å¸‚å†…æ‰€æœ‰çš„å¿ï¼Œä¼˜å…ˆä»æ•°æ®åº“æŸ¥è¯¢ï¼Œå¦‚æœæ²¡æœ‰æŸ¥è¯¢åˆ°å†å»æœåŠ¡å™¨ä¸ŠæŸ¥è¯¢ã€‚
-	 */
-	private void queryCounties() {
-		countyList = coolWeatherDB.loadCounties(selectedCity.getId());
-		if (countyList.size() > 0) {
-			dataList.clear();
-			for (County county : countyList) {
-				dataList.add(county.getCountyName());
-			}
-			adapter.notifyDataSetChanged();
-			listView.setSelection(0);
-			titleText.setText(selectedCity.getCityName());
-			currentLevel = LEVEL_COUNTY;
-		} else {
-			queryFromServer(selectedCity.getCityCode(), "county");
-		}
-	}
-	
-	/**
-	 * æ ¹æ®ä¼ å…¥çš„ä»£å·å’Œç±»å‹ä»æœåŠ¡å™¨ä¸ŠæŸ¥è¯¢çœå¸‚å¿æ•°æ®ã€‚
-	 */
+
 	private void queryFromServer(final String code, final String type) {
+		// TODO Auto-generated method stub
 		String address;
+		//¸ù¾İ´«ÈëµÄ²ÎÊı²éÑ¯Æ´½ÓµØÖ·
 		if (!TextUtils.isEmpty(code)) {
-			address = "http://www.weather.com.cn/data/list3/city" + code + ".xml";
+			address = "http://www.weather.com.cn/data/list3/city"+code+".xml";
 		} else {
 			address = "http://www.weather.com.cn/data/list3/city.xml";
 		}
 		showProgressDialog();
-		HttpUtil.sendHttpRequest(address, new HttpCallbackListener() {
+		//µ÷ÓÃ·½·¨Ïò·şÎñÆ÷·¢ËÍÇëÇó
+		HttpUtil.sendHttpRequest(address,new HttpCallbackListener(){
+
+			//ÏìÓ¦µÄÊı¾İ»á»Øµ÷µ½¸Ã·½·¨ÖĞ
 			@Override
 			public void onFinish(String response) {
+				// TODO Auto-generated method stub
 				boolean result = false;
+				//µ÷ÓÃ¸Ã·½·¨½âÎö´¦Àí·şÎñÆ÷·µ»ØµÄÊı¾İ£¬²¢´æ´¢µ½Êı¾İ¿âÖĞ
 				if ("province".equals(type)) {
-					result = Utility.handleProvincesResponse(coolWeatherDB,
-							response);
-				} else if ("city".equals(type)) {
-					result = Utility.handleCitiesResponse(coolWeatherDB,
-							response, selectedProvince.getId());
-				} else if ("county".equals(type)) {
-					result = Utility.handleCountiesResponse(coolWeatherDB,
-							response, selectedCity.getId());
+					result = Utility.handleProvincesResponse(null, response);
+				} else if("city".equals(type)) {
+					result = Utility.handleCitiesResponse(coolWeatherDB, response, selectedProvince.getId());
+				}else if("county".equals(type)) {
+					result = Utility.handleCountiesResponse(coolWeatherDB, response, selectedCity.getId());
 				}
 				if (result) {
-					// é€šè¿‡runOnUiThread()æ–¹æ³•å›åˆ°ä¸»çº¿ç¨‹å¤„ç†é€»è¾‘
+					//´Ó×ÓÏß³ÌÇĞ»»µ½Ö÷Ïß³Ì
 					runOnUiThread(new Runnable() {
+						
 						@Override
 						public void run() {
+							// TODO Auto-generated method stub
 							closeProgressDialog();
 							if ("province".equals(type)) {
 								queryProvinces();
-							} else if ("city".equals(type)) {
+							} else if("city".equals(type)){
 								queryCities();
-							} else if ("county".equals(type)) {
+							}else if("county".equals(type)) {
 								queryCounties();
 							}
 						}
@@ -213,56 +144,87 @@ public class ChooseAreaActivity extends Activity {
 
 			@Override
 			public void onError(Exception e) {
-				// é€šè¿‡runOnUiThread()æ–¹æ³•å›åˆ°ä¸»çº¿ç¨‹å¤„ç†é€»è¾‘
+				// TODO Auto-generated method stub
 				runOnUiThread(new Runnable() {
+					
 					@Override
 					public void run() {
+						// TODO Auto-generated method stub
 						closeProgressDialog();
-						Toast.makeText(ChooseAreaActivity.this,
-										"åŠ è½½å¤±è´¥", Toast.LENGTH_SHORT).show();
+						Toast.makeText(ChooseAreaActivity.this, "¼ÓÔØÊ§°Ü", Toast.LENGTH_SHORT).show();
 					}
 				});
 			}
+			
 		});
 	}
-	
-	/**
-	 * æ˜¾ç¤ºè¿›åº¦å¯¹è¯æ¡†
-	 */
+
 	private void showProgressDialog() {
+		// TODO Auto-generated method stub
 		if (progressDialog == null) {
 			progressDialog = new ProgressDialog(this);
-			progressDialog.setMessage("æ­£åœ¨åŠ è½½...");
-			progressDialog.setCanceledOnTouchOutside(false);
+			progressDialog.setMessage("ÕıÔÚ¼ÓÔØ...");
+			progressDialog.setCancelable(false);
 		}
 		progressDialog.show();
 	}
 	
-	/**
-	 * å…³é—­è¿›åº¦å¯¹è¯æ¡†
-	 */
 	private void closeProgressDialog() {
+		// TODO Auto-generated method stub
 		if (progressDialog != null) {
 			progressDialog.dismiss();
 		}
 	}
 	
-	/**
-	 * æ•è·BackæŒ‰é”®ï¼Œæ ¹æ®å½“å‰çš„çº§åˆ«æ¥åˆ¤æ–­ï¼Œæ­¤æ—¶åº”è¯¥è¿”å›å¸‚åˆ—è¡¨ã€çœåˆ—è¡¨ã€è¿˜æ˜¯ç›´æ¥é€€å‡ºã€‚
-	 */
+	//ÖØĞ´¸Ã·½·¨¸²¸ÇÄ¬ÈÏBack¼üµÄĞĞÎª£¬ÕâÀï»á¸ù¾İµ±Ç°µÄ¼¶±ğÀ´ÅĞ¶ÏÊÇ·µ»ØÊĞ¼¶ÁĞ±í¡¢Ê¡¼¶ÁĞ±í¡¢»¹ÊÇÖ±½ÓÍË³ö
 	@Override
 	public void onBackPressed() {
+		// TODO Auto-generated method stub
 		if (currentLevel == LEVEL_COUNTY) {
 			queryCities();
-		} else if (currentLevel == LEVEL_CITY) {
+		} else if(currentLevel == LEVEL_CITY) {
 			queryProvinces();
-		} else {
-			if (isFromWeatherActivity) {
-				Intent intent = new Intent(this, WeatherActivity.class);
-				startActivity(intent);
-			}
+		}else {
 			finish();
 		}
 	}
+
+	private void queryProvinces() {
+		// TODO Auto-generated method stub
+		//´ÓÊı¾İ¿âµØ¶ÁÈ¡Ê¡¼¶Êı¾İ
+		provinceList = coolWeatherDB.loadProvinces();
+		//¶ÁÈ¡µ½Êı¾İµÄ»°¾ÍÖ±½Ó½«Êı¾İÏÔÊ¾µ½½çÃæÉÏ
+		if (provinceList.size()>0) {
+			dataList.clear();
+			for (Province province : provinceList) {
+				dataList.add(province.getProvinceName());
+			}
+			adapter.notifyDataSetChanged();
+			listView.setSelection(0);
+			titleText.setText("ÖĞ¹ú");
+			currentLevel = LEVEL_PROVINCE;
+		} else {		
+			//Ã»ÓĞ¶ÁÈ¡µ½¾Íµ÷ÓÃ¸Ã·½·¨´Ó·şÎñÆ÷ÉÏ²éÑ¯Êı¾İ
+			queryFromServer(null,"province");
+		}
+	}
+
+	protected void queryCounties() {
+		// TODO Auto-generated method stub
+		countyList = coolWeatherDB.loadCounties(selectedCity.getId());
+		if (countyList.size()>0) {
+			dataList.clear();
+			for (County county : countyList) {
+				dataList.add(county.getCountyName());
+			}
+			adapter.notifyDataSetChanged();
+			listView.setSelection(0);
+			titleText.setText(selectedCity.getCityName());
+			currentLevel = LEVEL_COUNTY;
+		} else {
+			queryFromServer(selectedCity.getCityCode(),"county");
+		}
+	}
+
 
 }
